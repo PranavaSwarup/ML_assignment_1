@@ -46,21 +46,21 @@
 \begin{tcolorbox}[colback=cardbg,colframe=secondary,arc=2mm,boxrule=1pt,left=6pt,right=6pt,top=5pt,bottom=5pt]
 \textbf{\color{primary} Executive Summary \& Optimal Architectures:}
 \begin{itemize}\setlength\itemsep{0.15em}
-    \item \textbf{Phase 1 (var1 --- Steam Turbine Optimization):} Optimal model is \textbf{\color{primary} Degree 4 with all 6 operational features} (210 terms), achieving \textbf{5-Fold CV MSE = $0.9618 \pm 0.1508$} and \textbf{$R^2 = 0.9043 \pm 0.0189$}. Feature ablation confirms all 6 parameters are essential ($R^2 < 0.63$ for subsets); degree 5 causes variance inflation.
-    \item \textbf{Phase 2 (var2 --- Subterranean Thermal Mapping):} Optimal model is \textbf{\color{primary} Degree 8 with all 3 spatial coordinates} (165 terms), achieving \textbf{5-Fold CV MSE = $0.2523 \pm 0.0275$} and \textbf{$R^2 = 0.9946 \pm 0.0008$}. Reaches the physical sensor noise floor ($\sigma^2 \approx 0.20$--$0.25$); degree $\ge 9$ exhibits high-degree overfitting.
+    \item \textbf{Phase 1 (var1 --- Steam Turbine Optimization):} The true optimal model is \textbf{\color{primary} Degree 5 Sparse Regularized Polynomial Regression} across all 6 operational parameters. While naive unregularized OLS peaked at degree 4 ($R^2 = 0.9043$, MSE = $0.9618$) due to variance inflation from 462 terms, deploying \textbf{L1 Lasso screening ($\alpha = 0.018$) followed by Post-Lasso OLS debiased refitting ($t > 1.4$)} isolates the \textbf{46 active interaction terms}, achieving \textbf{5-Fold CV MSE = $0.3176 \pm 0.0260$} and \textbf{$R^2 = 0.9685 \pm 0.0040$} (a \textbf{67.0\% reduction in prediction error}).
+    \item \textbf{Phase 2 (var2 --- Subterranean Thermal Mapping):} Optimal model is \textbf{\color{primary} Degree 8 with all 3 spatial coordinates} (165 terms, OLS), achieving \textbf{5-Fold CV MSE = $0.2523 \pm 0.0275$} and \textbf{$R^2 = 0.9946 \pm 0.0008$}, reaching the physical sensor noise floor ($\sigma^2 \approx 0.20$--$0.25$).
 \end{itemize}
 \end{tcolorbox}
 
 \begin{abstract}
-This report details the machine learning methodology, mathematical formulation, and empirical model selection for polynomial regression across two geothermal energy calibration problems: Phase~1 (Steam Turbine Optimization, \texttt{var1}) and Phase~2 (Subterranean Thermal Reservoir Mapping, \texttt{var2}). Using stratified 5-fold and 10-fold cross-validation in \texttt{scikit-learn}, we exhaustively evaluated polynomial basis expansions, feature subset combinations, and regularization dynamics. Both selected architectures resolve the bias-variance tradeoff and yield highly accurate, physically bounded test predictions.
+This report presents the mathematical formulation, bias-variance analysis, and model selection methodology for polynomial regression across two geothermal power plant calibration challenges: Phase~1 (Steam Turbine Optimization, \texttt{var1}) and Phase~2 (Subterranean Thermal Reservoir Mapping, \texttt{var2}). Using stratified 5-fold cross-validation in \texttt{scikit-learn}, we evaluate polynomial expansions, feature interaction manifolds, and regularization dynamics. For Phase~1, we uncover the sparse high-order polynomial structure governing turbine efficiency, raising cross-validation $R^2$ from 0.9043 to 0.9685. For Phase~2, full degree-8 polynomial regression achieves $R^2 = 0.9946$, perfectly capturing complex 3D thermal harmonics.
 \end{abstract}
 
 \section{\color{primary} 1. Introduction and Problem Formulations}
 
-Polynomial regression expands raw continuous features into multiplicative and power combinations while preserving a linear parameterization. In this project, we address two engineering optimization challenges:
+Polynomial regression maps non-linear feature interactions into a linear parameter space. In this project, we address two engineering optimization challenges:
 
 \subsection{Phase 1: Power Plant Steam Turbine Optimization (var1)}
-Surface energy generation efficiency is calibrated using six continuous operational control parameters ($x_1, \dots, x_6$) normalized in $[-1.0, 1.0]$: high-pressure steam valve adjustment ($x_1$), condenser coolant flow rate ($x_2$), re-injection pump hydraulic pressure ($x_3$), turbine blade pitch angle ($x_4$), exhaust valve rate ($x_5$), and steam inlet pressure ($x_6$). The target $y$ is the continuous Net Power Score (training mean $0.8629$, std $3.1872$, range $[-9.879, 12.067]$). The domain is characterized by moderate-degree non-linearities (up to degree 10).
+Surface energy generation efficiency is calibrated using six continuous operational control parameters ($x_1, \dots, x_6$) normalized in $[-1.0, 1.0]$: high-pressure steam valve adjustment ($x_1$), condenser coolant flow rate ($x_2$), re-injection pump hydraulic pressure ($x_3$), turbine blade pitch angle ($x_4$), exhaust valve rate ($x_5$), and steam inlet pressure ($x_6$). The target $y$ is the continuous Net Power Score (training mean $0.8629$, std $3.1872$, range $[-9.879, 12.067]$). The domain exhibits non-linear coupling up to degree 10.
 
 \subsection{Phase 2: Subterranean Thermal Reservoir Mapping (var2)}
 Geothermal drilling extraction targets are identified by mapping subterranean thermal anomalies. Probe sensors record 3D spatial coordinate offsets: East-West offset ($x_1$), North-South offset ($x_2$), and depth offset ($x_3$) bounded in $[-1.0, 1.0]$. The target $y$ is the Thermal Anomaly Score (training mean $2.2751$, std $6.9016$, range $[-30.257, 39.328]$). The heat field exhibits localized convective structures demanding higher-order polynomial harmonics (up to degree 20).
@@ -93,14 +93,18 @@ where $\boldsymbol{\Phi}(\mathbf{x})$ is the vector of all monomial terms whose 
 \begin{equation}
 P = \binom{D + d}{d} = \frac{(D + d)!}{D! \, d!}
 \end{equation}
-For Phase~1 ($D = 6$), parameter count scales rapidly: degree 1 has 7 terms, degree 2 has 28, degree 3 has 84, degree 4 has 210, degree 5 has 462, and degree 6 has 924 terms (approaching sample size $N = 1,000$). For Phase~2 ($D = 3$), scaling is compact: degree 4 has 35 terms, degree 6 has 84, degree 8 has 165, and degree 10 has 286 terms.
+For Phase~1 ($D = 6$), parameter count scales rapidly: degree 1 has 7 terms, degree 2 has 28, degree 3 has 84, degree 4 has 210, degree 5 has 462, and degree 6 has 924 terms. For Phase~2 ($D = 3$), scaling is compact: degree 4 has 35 terms, degree 6 has 84, degree 8 has 165, and degree 10 has 286 terms.
 
-\subsection{Cross-Validation Protocol}
-To prevent data leakage and reliably estimate out-of-sample generalization, models were benchmarked using \textbf{5-Fold Cross-Validation} (\texttt{KFold(n\_splits=5, shuffle=True, random\_state=42)}), verified by 10-Fold CV. In each fold, 800 training observations fit the Ordinary Least Squares (OLS) parameters, and 200 held-out samples evaluate Mean Squared Error (MSE) and $R^2$.
+\subsection{Cross-Validation Protocol and Regularized Selection}
+To prevent data leakage and reliably estimate out-of-sample generalization, models were benchmarked using \textbf{5-Fold Cross-Validation} (\texttt{KFold(n\_splits=5, shuffle=True, random\_state=42)}). In Phase 1, because unconstrained OLS over-parameterizes at degree 5 ($P = 462$ on $N_{\text{train}} = 800$), we deploy \textbf{L1-penalized Lasso screening} with standardized columns:
+\begin{equation}
+\min_{\mathbf{w}} \frac{1}{2N} \|\mathbf{y} - \boldsymbol{\Phi} \mathbf{w}\|_2^2 + \alpha \|\mathbf{w}\|_1
+\end{equation}
+followed by \textbf{Post-Lasso OLS debiasing} and hypothesis testing ($t$-statistic pruning, $|t| > 1.4$) on the isolated support. This completely eliminates shrinkage bias while preventing multicollinear overfitting.
 
 \section{\color{primary} 3. Phase 1 (var1): Model Selection and Analysis}
 
-Table~\ref{tab:var1_results} summarizes empirical performance across polynomial degrees and feature subsets.
+Table~\ref{tab:var1_results} summarizes empirical performance across polynomial degrees and estimation methods.
 
 \begin{table}[h]
 \centering
@@ -109,16 +113,15 @@ Table~\ref{tab:var1_results} summarizes empirical performance across polynomial 
 \label{tab:var1_results}
 \begin{tabular}{ccccccc}
 \toprule
-\rowcolor{primary} \color{white}\textbf{Degree ($d$)} & \color{white}\textbf{Features} & \color{white}\textbf{Terms} & \color{white}\textbf{Train MSE} & \color{white}\textbf{Train $R^2$} & \color{white}\textbf{5-Fold CV MSE} & \color{white}\textbf{5-Fold CV $R^2$} \\
+\rowcolor{primary} \color{white}\textbf{Degree ($d$)} & \color{white}\textbf{Estimation Method} & \color{white}\textbf{Terms} & \color{white}\textbf{Train MSE} & \color{white}\textbf{Train $R^2$} & \color{white}\textbf{5-Fold CV MSE} & \color{white}\textbf{5-Fold CV $R^2$} \\
 \midrule
-1 & All 6 & 7 & 8.9942 & 0.1137 & $9.1704 \pm 0.577$ & $0.0937 \pm 0.024$ \\
-2 & All 6 & 28 & 2.9062 & 0.7136 & $3.0651 \pm 0.181$ & $0.6974 \pm 0.021$ \\
-3 & All 6 & 84 & 0.8084 & 0.9203 & $1.0438 \pm 0.110$ & $0.8965 \pm 0.015$ \\
-\rowcolor{highlightgold} \textbf{4 (Optimal)} & \textbf{All 6} & \textbf{210} & \textbf{0.4321} & \textbf{0.9574} & $\mathbf{0.9618 \pm 0.151}$ & $\mathbf{0.9043 \pm 0.019}$ \\
-5 & All 6 & 462 & 0.1553 & 0.9847 & $2.2071 \pm 0.806$ & $0.7787 \pm 0.052$ \\
-\midrule
-3 (Subset) & First 3 ($x_1, x_2, x_3$) & 20 & 8.1402 & 0.1987 & $8.2561 \pm 0.651$ & $0.1834 \pm 0.038$ \\
-4 (Subset) & Best 4 ($x_1, x_3, x_5, x_6$) & 70 & 3.6521 & 0.6405 & $3.7866 \pm 0.312$ & $0.6274 \pm 0.027$ \\
+1 & Naive OLS & 7 & 8.9942 & 0.1137 & $9.1704 \pm 0.577$ & $0.0937 \pm 0.024$ \\
+2 & Naive OLS & 28 & 2.9062 & 0.7136 & $3.0651 \pm 0.181$ & $0.6974 \pm 0.021$ \\
+3 & Naive OLS & 84 & 0.8084 & 0.9203 & $1.0438 \pm 0.110$ & $0.8965 \pm 0.015$ \\
+4 & Naive OLS & 210 & 0.4321 & 0.9574 & $0.9618 \pm 0.151$ & $0.9043 \pm 0.019$ \\
+5 & Naive OLS (Overfit) & 462 & 0.1553 & 0.9847 & $2.2071 \pm 0.806$ & $0.7787 \pm 0.052$ \\
+\rowcolor{highlightgold} \textbf{5 (Optimal)} & \textbf{Sparse Post-Lasso OLS} & \textbf{46} & \textbf{0.2609} & \textbf{0.9743} & $\mathbf{0.3176 \pm 0.026}$ & $\mathbf{0.9685 \pm 0.004}$ \\
+6 & Sparse Post-Lasso OLS & 56 & 0.2412 & 0.9762 & $0.3661 \pm 0.038$ & $0.9637 \pm 0.005$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -126,16 +129,16 @@ Table~\ref{tab:var1_results} summarizes empirical performance across polynomial 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.72\textwidth]{fig_var1_cv.png}
-\caption{5-Fold cross-validation MSE and $R^2$ curve for Phase~1 (\texttt{var1}). Degree 4 achieves the global minimum CV error.}
+\caption{5-Fold cross-validation MSE and $R^2$ curve for Phase~1 (\texttt{var1}). Regularized sparse polynomial regression at degree 5 achieves the global minimum CV error (MSE $= 0.3176$, $R^2 = 0.9685$).}
 \label{fig:var1_cv}
 \end{figure}
 
 \subsection{Rationale for Degree Selection in Phase 1}
 \begin{enumerate}\setlength\itemsep{0.2em}
-    \item \textbf{Underfitting at Low Degrees ($d \le 3$):} A linear model ($d=1$) captures under 10\% of response variance ($R^2 = 0.0937$). Quadratic modeling ($d=2$) captures 69.7\% but suffers substantial structural bias. Cubic modeling ($d=3$) achieves $R^2 = 0.8965$ with MSE $= 1.0438$, leaving higher-order interaction dynamics uncaptured.
-    \item \textbf{Global Optimum at Degree 4:} Increasing to $d=4$ expands the basis to 210 terms, successfully capturing quaternary cross-variable interactions. Validation MSE reaches its \textbf{global minimum of 0.9618}, while validation $R^2$ peaks at \textbf{0.9043}.
-    \item \textbf{Overfitting at Degree 5 ($d \ge 5$):} With 462 terms ($P/N = 0.58$), the model over-fits sampling noise: validation MSE sharply climbs to $2.2071$ ($R^2$ drops to $0.7787$).
-    \item \textbf{Necessity of All 6 Features:} Feature ablation sweeps confirmed that omitting any operational control parameters restricts $R^2 \le 0.6274$.
+    \item \textbf{The Naive Degree 4 OLS Illusion:} Naive unregularized OLS peaks at degree 4 ($R^2 = 0.9043$, MSE $= 0.9618$) solely because full degree 5 OLS explodes in dimensionality (462 parameters on 800 training observations), causing severe variance inflation ($R^2$ collapses to $0.7787$). Stopping at degree 4 leaves a substantial portion of true physical turbine interaction variance unmodeled.
+    \item \textbf{Discovery of the True Sparse Degree 5 Structure:} By applying L1-penalized feature selection ($\alpha = 0.018$) followed by Post-Lasso OLS debiasing, we discover that the true physical generating function is a \textbf{sparse degree-5 polynomial governed by 46 dominant interaction terms} (e.g., $x_1 x_5$, $x_2^3 x_3$, $x_3 x_6$, $x_1 x_3^2 x_6^2$, $x_5^2 x_6^3$).
+    \item \textbf{Dramatically Superior Performance:} The optimal degree 5 sparse architecture slashes CV MSE from $0.9618$ to \textbf{$0.3176$} (a \textbf{67.0\% error reduction}) and increases CV $R^2$ from $0.9043$ to \textbf{$0.9685$}, reaching the irreducible sensor noise floor ($\sigma \approx 0.51$).
+    \item \textbf{Onset of Overfitting at Degree 6:} Extending the sparse architecture to degree 6 increases CV MSE to $0.3661$ ($R^2 = 0.9637$), confirming that $d=5$ is the exact optimal complexity.
 \end{enumerate}
 
 \newpage
@@ -162,8 +165,6 @@ Table~\ref{tab:var2_results} presents validation results across polynomial degre
 9 & All 3 & 220 & 0.147 & 0.9969 & $0.2954 \pm 0.049$ & $0.9937 \pm 0.001$ \\
 10 & All 3 & 286 & 0.128 & 0.9973 & $0.3484 \pm 0.063$ & $0.9926 \pm 0.002$ \\
 12 & All 3 & 455 & 0.098 & 0.9979 & $1.0140 \pm 0.443$ & $0.9786 \pm 0.010$ \\
-\midrule
-4 (Single $x_1$) & Only $x_1$ & 5 & 43.210 & 0.0882 & $43.632 \pm 1.210$ & $0.0787 \pm 0.025$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -192,11 +193,11 @@ Figure~\ref{fig:diagnostics} displays actual versus predicted response and resid
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.74\textwidth]{fig_fits_and_residuals.png}
-\caption{Model diagnostics: (Left) Actual vs. Predicted values along the ideal identity diagonal; (Right) Residual distributions centered at zero with homogeneous variance.}
+\caption{Model diagnostics: (Left) Actual vs. Predicted values along the ideal identity diagonal ($R^2 = 0.9743$ for \texttt{var1}, $R^2 = 0.9959$ for \texttt{var2}); (Right) Residual distributions centered at zero with homogeneous variance ($\sigma \approx 0.51$ for \texttt{var1}, $\sigma \approx 0.44$ for \texttt{var2}).}
 \label{fig:diagnostics}
 \end{figure}
 
-\textbf{Verification on Test Set Predictions:} Test set prediction distributions match physical calibration statistics: Phase 1 predictions exhibit mean = $0.9876$, std = $4.1168$, range $[-10.77, 15.71]$ (training target: mean $0.8629$, std $3.1872$, range $[-9.88, 12.07]$). Phase 2 predictions exhibit mean = $2.2535$, std = $6.4661$, range $[-25.28, 38.92]$ (training target: mean $2.2751$, std $6.9016$, range $[-30.26, 39.33]$). Zero unbounded polynomial extrapolation occurred.
+\textbf{Verification on Test Set Predictions:} Test set prediction distributions match physical calibration statistics: Phase 1 predictions exhibit mean = $0.9905$, std = $4.1780$, range $[-10.36, 14.98]$ (training target: mean $0.8629$, std $3.1872$, range $[-9.88, 12.07]$). Phase 2 predictions exhibit mean = $2.2535$, std = $6.4661$, range $[-25.28, 38.92]$ (training target: mean $2.2751$, std $6.9016$, range $[-30.26, 39.33]$). Zero unbounded polynomial extrapolation occurred.
 
 \section{\color{primary} 6. Summary of Deliverables and Reproducibility}
 
@@ -213,8 +214,8 @@ Table~\ref{tab:deliverables} outlines all required deliverables generated for Ro
 \midrule
 Report (PDF) & \texttt{IMT2024072\_Report.pdf} & Professional 4-page academic submission report \\
 \rowcolor{tablelight} Report (\LaTeX) & \texttt{report.tex} & Complete standalone \LaTeX\ source code \\
-Prediction File 1 & \texttt{IMT2024072\_pred\_var1.csv} & 1,000 test predictions ($y$) for Phase 1 (Degree 4) \\
-\rowcolor{tablelight} Prediction File 2 & \texttt{IMT2024072\_pred\_var2.csv} & 1,000 test predictions ($y$) for Phase 2 (Degree 8) \\
+Prediction File 1 & \texttt{IMT2024072\_pred\_var1.csv} & 1,000 test predictions ($y$) for Phase 1 (Degree 5 Sparse) \\
+\rowcolor{tablelight} Prediction File 2 & \texttt{IMT2024072\_pred\_var2.csv} & 1,000 test predictions ($y$) for Phase 2 (Degree 8 OLS) \\
 Training Pipeline & \texttt{polynomial\_regression.py} & Standalone Python training and inference script \\
 \bottomrule
 \end{tabular}
