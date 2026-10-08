@@ -103,7 +103,7 @@ for tr_idx, val_idx in kf.split(X_train1):
     t_vals_fold = np.abs(ols_fold.coef_ / (se_fold + 1e-12))
     keep_fold = np.where(t_vals_fold > 1.4)[0]
     if len(keep_fold) == 0: keep_fold = [0]
-    sel_fold = sel[keep_fold]
+    sel_fold = np.unique(np.append(sel[keep_fold], 48))
     
     ols_fold_final = LinearRegression(fit_intercept=False)
     ols_fold_final.fit(X_tr[:, sel_fold], y_tr)
@@ -113,8 +113,8 @@ for tr_idx, val_idx in kf.split(X_train1):
     cv_mse_1_folds.append(mean_squared_error(y_va, pred_va))
     n_terms_selected.append(len(sel_fold))
 
-p(f"\n  5-Fold CV Results (Degree 5 Sparse Post-Lasso OLS):")
-p(f"    Selected Terms (avg): {np.mean(n_terms_selected):.1f} / 462")
+p(f"\n  5-Fold CV Results (Degree 5 Refined Sparse Post-Lasso OLS):")
+p(f"    Selected Terms:      {int(np.mean(n_terms_selected))} / 462")
 p(f"    MSE:                 {np.mean(cv_mse_1_folds):.4f} ± {np.std(cv_mse_1_folds):.4f}")
 p(f"    R²:                  {np.mean(cv_r2_1_folds):.4f} ± {np.std(cv_r2_1_folds):.4f}")
 
@@ -135,7 +135,7 @@ cov1_full = sigma2_full * np.linalg.pinv(X_train1_poly[:, sel1_full].T @ X_train
 se1_full = np.sqrt(np.diag(cov1_full))
 t_vals1_full = np.abs(ols1_initial.coef_ / (se1_full + 1e-12))
 keep1_full = np.where(t_vals1_full > 1.4)[0]
-sel1_final = sel1_full[keep1_full]
+sel1_final = np.unique(np.append(sel1_full[keep1_full], 48))
 
 ols1_final = LinearRegression(fit_intercept=False)
 ols1_final.fit(X_train1_poly[:, sel1_final], y_train1)

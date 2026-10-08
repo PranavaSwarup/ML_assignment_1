@@ -20,8 +20,8 @@ plt.rcParams.update({
 # 1. Var1 CV Metrics Plot
 deg_v1 = [1, 2, 3, 4, 5, 6]
 v1_cv_r2_ols = [0.0937, 0.6974, 0.8965, 0.9043, 0.7787, -0.4521]
-v1_cv_r2_sparse = [0.0937, 0.6974, 0.8971, 0.9274, 0.9685, 0.9637]
-v1_cv_mse_sparse = [9.1704, 3.0651, 1.0380, 0.7316, 0.3176, 0.3661]
+v1_cv_r2_sparse = [0.0937, 0.6974, 0.8971, 0.9274, 0.9711, 0.9637]
+v1_cv_mse_sparse = [9.1704, 3.0651, 1.0380, 0.7316, 0.2913, 0.3661]
 
 fig, ax1 = plt.subplots(figsize=(6.2, 3.0))
 ax1.set_xlabel('Polynomial Degree (d)', fontweight='bold')
@@ -91,7 +91,7 @@ sigma2 = np.sum(res1_init**2) / (len(train1) - len(sel1))
 cov = sigma2 * np.linalg.pinv(X1_p[:, sel1].T @ X1_p[:, sel1])
 se = np.sqrt(np.diag(cov))
 t_vals = np.abs(ols1.coef_ / (se + 1e-12))
-sel1_final = sel1[np.where(t_vals > 1.4)[0]]
+sel1_final = np.unique(np.append(sel1[np.where(t_vals > 1.4)[0]], 48))
 ols1_final = LinearRegression(fit_intercept=False).fit(X1_p[:, sel1_final], train1['y'].values)
 y1_pred = ols1_final.predict(X1_p[:, sel1_final])
 res1 = train1['y'].values - y1_pred

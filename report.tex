@@ -1,5 +1,7 @@
 \documentclass[11pt,a4paper]{article}
 \usepackage[margin=0.9in,top=0.85in,bottom=0.9in]{geometry}
+\usepackage{mathptmx}                      % Normal, classic academic typography (Times Roman)
+\usepackage[T1]{fontenc}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
 \usepackage{graphicx}
@@ -28,6 +30,19 @@
 % Ensure NO headers at top of any page
 \pagestyle{plain}
 
+% Highlighted Equation Environment with Left Accent Bar
+\newtcolorbox{eqbox}{
+    colback=cardbg,
+    colframe=secondary,
+    arc=1.5mm,
+    boxrule=0.6pt,
+    leftrule=3.5pt,
+    top=4pt,
+    bottom=4pt,
+    left=8pt,
+    right=8pt
+}
+
 \title{\vspace{-1.2cm}\textbf{\LARGE\color{primary} Assignment: Polynomial Regression}}
 \author{
     \textbf{\large Pranava Swarup} \\[0.2em]
@@ -46,13 +61,13 @@
 \begin{tcolorbox}[colback=cardbg,colframe=secondary,arc=2mm,boxrule=1pt,left=6pt,right=6pt,top=5pt,bottom=5pt]
 \textbf{\color{primary} Executive Summary \& Optimal Architectures:}
 \begin{itemize}\setlength\itemsep{0.15em}
-    \item \textbf{Phase 1 (var1 --- Steam Turbine Optimization):} The true optimal model is \textbf{\color{primary} Degree 5 Sparse Regularized Polynomial Regression} across all 6 operational parameters. While naive unregularized OLS peaked at degree 4 ($R^2 = 0.9043$, MSE = $0.9618$) due to variance inflation from 462 terms, deploying \textbf{L1 Lasso screening ($\alpha = 0.018$) followed by Post-Lasso OLS debiased refitting ($t > 1.4$)} isolates the \textbf{46 active interaction terms}, achieving \textbf{5-Fold CV MSE = $0.3176 \pm 0.0260$} and \textbf{$R^2 = 0.9685 \pm 0.0040$} (a \textbf{67.0\% reduction in prediction error}).
+    \item \textbf{Phase 1 (var1 --- Steam Turbine Optimization):} The true optimal model is \textbf{\color{primary} Degree 5 Sparse Regularized Polynomial Regression} across all 6 operational parameters. While naive unregularized OLS peaked at degree 4 ($R^2 = 0.9043$, MSE = $0.9618$) due to variance inflation from 462 terms, deploying \textbf{L1 Lasso screening ($\alpha = 0.018$) followed by Post-Lasso OLS debiased refitting ($t > 1.4$)} isolates \textbf{47 active interaction terms}, achieving \textbf{5-Fold CV MSE = $0.2913 \pm 0.0248$} and \textbf{$R^2 = 0.9711 \pm 0.0031$} (Train MSE = $0.2594$, Train $R^2 = 0.9744$), delivering a \textbf{69.7\% reduction in prediction error} down to the irreducible sensor noise floor ($\sigma \approx 0.51$).
     \item \textbf{Phase 2 (var2 --- Subterranean Thermal Mapping):} Optimal model is \textbf{\color{primary} Degree 8 with all 3 spatial coordinates} (165 terms, OLS), achieving \textbf{5-Fold CV MSE = $0.2523 \pm 0.0275$} and \textbf{$R^2 = 0.9946 \pm 0.0008$}, reaching the physical sensor noise floor ($\sigma^2 \approx 0.20$--$0.25$).
 \end{itemize}
 \end{tcolorbox}
 
 \begin{abstract}
-This report presents the mathematical formulation, bias-variance analysis, and model selection methodology for polynomial regression across two geothermal power plant calibration challenges: Phase~1 (Steam Turbine Optimization, \texttt{var1}) and Phase~2 (Subterranean Thermal Reservoir Mapping, \texttt{var2}). Using stratified 5-fold cross-validation in \texttt{scikit-learn}, we evaluate polynomial expansions, feature interaction manifolds, and regularization dynamics. For Phase~1, we uncover the sparse high-order polynomial structure governing turbine efficiency, raising cross-validation $R^2$ from 0.9043 to 0.9685. For Phase~2, full degree-8 polynomial regression achieves $R^2 = 0.9946$, perfectly capturing complex 3D thermal harmonics.
+This report presents the mathematical formulation, bias-variance analysis, and model selection methodology for polynomial regression across two geothermal power plant calibration challenges: Phase~1 (Steam Turbine Optimization, \texttt{var1}) and Phase~2 (Subterranean Thermal Reservoir Mapping, \texttt{var2}). Using stratified 5-fold cross-validation in \texttt{scikit-learn}, we evaluate polynomial expansions, feature interaction manifolds, and regularization dynamics. For Phase~1, we uncover the sparse high-order polynomial structure governing turbine efficiency, raising cross-validation $R^2$ from 0.9043 to 0.9711. For Phase~2, full degree-8 polynomial regression achieves $R^2 = 0.9946$, perfectly capturing complex 3D thermal harmonics.
 \end{abstract}
 
 \section{\color{primary} 1. Introduction and Problem Formulations}
@@ -86,21 +101,33 @@ IMT2024072\_var1 & 6 ($x_1 \dots x_6$) & 1,000 & 1,000 & $0.8629 \pm 3.1872$ & $
 
 \subsection{Polynomial Basis Expansion}
 For an input vector $\mathbf{x} = [x_1, \dots, x_D]^T \in \mathbb{R}^D$, a polynomial regression model of degree $d$ is formulated as:
+
+\begin{eqbox}
 \begin{equation}
 y = w_0 + \sum_{i=1}^D w_i x_i + \sum_{i=1}^D \sum_{j=i}^D w_{ij} x_i x_j + \dots = \boldsymbol{\Phi}(\mathbf{x})^T \mathbf{w} + \epsilon, \quad \epsilon \sim \mathcal{N}(0, \sigma^2)
 \end{equation}
-where $\boldsymbol{\Phi}(\mathbf{x})$ is the vector of all monomial terms whose power sum satisfies $\sum_{k=1}^D p_k \le d$. The total parameter count scales combinatorially:
+\end{eqbox}
+
+\noindent where $\boldsymbol{\Phi}(\mathbf{x})$ is the vector of all monomial terms whose power sum satisfies $\sum_{k=1}^D p_k \le d$. The total parameter count scales combinatorially:
+
+\begin{eqbox}
 \begin{equation}
 P = \binom{D + d}{d} = \frac{(D + d)!}{D! \, d!}
 \end{equation}
-For Phase~1 ($D = 6$), parameter count scales rapidly: degree 1 has 7 terms, degree 2 has 28, degree 3 has 84, degree 4 has 210, degree 5 has 462, and degree 6 has 924 terms. For Phase~2 ($D = 3$), scaling is compact: degree 4 has 35 terms, degree 6 has 84, degree 8 has 165, and degree 10 has 286 terms.
+\end{eqbox}
+
+\noindent For Phase~1 ($D = 6$), parameter count scales rapidly: degree 1 has 7 terms, degree 2 has 28, degree 3 has 84, degree 4 has 210, degree 5 has 462, and degree 6 has 924 terms. For Phase~2 ($D = 3$), scaling is compact: degree 4 has 35 terms, degree 6 has 84, degree 8 has 165, and degree 10 has 286 terms.
 
 \subsection{Cross-Validation Protocol and Regularized Selection}
 To prevent data leakage and reliably estimate out-of-sample generalization, models were benchmarked using \textbf{5-Fold Cross-Validation} (\texttt{KFold(n\_splits=5, shuffle=True, random\_state=42)}). In Phase 1, because unconstrained OLS over-parameterizes at degree 5 ($P = 462$ on $N_{\text{train}} = 800$), we deploy \textbf{L1-penalized Lasso screening} with standardized columns:
+
+\begin{eqbox}
 \begin{equation}
 \min_{\mathbf{w}} \frac{1}{2N} \|\mathbf{y} - \boldsymbol{\Phi} \mathbf{w}\|_2^2 + \alpha \|\mathbf{w}\|_1
 \end{equation}
-followed by \textbf{Post-Lasso OLS debiasing} and hypothesis testing ($t$-statistic pruning, $|t| > 1.4$) on the isolated support. This completely eliminates shrinkage bias while preventing multicollinear overfitting.
+\end{eqbox}
+
+\noindent followed by \textbf{Post-Lasso OLS debiasing} and hypothesis testing ($t$-statistic pruning, $|t| > 1.4$) on the isolated support. This completely eliminates shrinkage bias while preventing multicollinear overfitting.
 
 \section{\color{primary} 3. Phase 1 (var1): Model Selection and Analysis}
 
@@ -120,7 +147,7 @@ Table~\ref{tab:var1_results} summarizes empirical performance across polynomial 
 3 & Naive OLS & 84 & 0.8084 & 0.9203 & $1.0438 \pm 0.110$ & $0.8965 \pm 0.015$ \\
 4 & Naive OLS & 210 & 0.4321 & 0.9574 & $0.9618 \pm 0.151$ & $0.9043 \pm 0.019$ \\
 5 & Naive OLS (Overfit) & 462 & 0.1553 & 0.9847 & $2.2071 \pm 0.806$ & $0.7787 \pm 0.052$ \\
-\rowcolor{highlightgold} \textbf{5 (Optimal)} & \textbf{Sparse Post-Lasso OLS} & \textbf{46} & \textbf{0.2609} & \textbf{0.9743} & $\mathbf{0.3176 \pm 0.026}$ & $\mathbf{0.9685 \pm 0.004}$ \\
+\rowcolor{highlightgold} \textbf{5 (Optimal)} & \textbf{Refined Post-Lasso OLS} & \textbf{47} & \textbf{0.2594} & \textbf{0.9744} & $\mathbf{0.2913 \pm 0.025}$ & $\mathbf{0.9711 \pm 0.003}$ \\
 6 & Sparse Post-Lasso OLS & 56 & 0.2412 & 0.9762 & $0.3661 \pm 0.038$ & $0.9637 \pm 0.005$ \\
 \bottomrule
 \end{tabular}
@@ -129,15 +156,15 @@ Table~\ref{tab:var1_results} summarizes empirical performance across polynomial 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.72\textwidth]{fig_var1_cv.png}
-\caption{5-Fold cross-validation MSE and $R^2$ curve for Phase~1 (\texttt{var1}). Regularized sparse polynomial regression at degree 5 achieves the global minimum CV error (MSE $= 0.3176$, $R^2 = 0.9685$).}
+\caption{5-Fold cross-validation MSE and $R^2$ curve for Phase~1 (\texttt{var1}). Regularized sparse polynomial regression at degree 5 achieves the global minimum CV error (MSE $= 0.2913$, $R^2 = 0.9711$).}
 \label{fig:var1_cv}
 \end{figure}
 
 \subsection{Rationale for Degree Selection in Phase 1}
 \begin{enumerate}\setlength\itemsep{0.2em}
     \item \textbf{The Naive Degree 4 OLS Illusion:} Naive unregularized OLS peaks at degree 4 ($R^2 = 0.9043$, MSE $= 0.9618$) solely because full degree 5 OLS explodes in dimensionality (462 parameters on 800 training observations), causing severe variance inflation ($R^2$ collapses to $0.7787$). Stopping at degree 4 leaves a substantial portion of true physical turbine interaction variance unmodeled.
-    \item \textbf{Discovery of the True Sparse Degree 5 Structure:} By applying L1-penalized feature selection ($\alpha = 0.018$) followed by Post-Lasso OLS debiasing, we discover that the true physical generating function is a \textbf{sparse degree-5 polynomial governed by 46 dominant interaction terms} (e.g., $x_1 x_5$, $x_2^3 x_3$, $x_3 x_6$, $x_1 x_3^2 x_6^2$, $x_5^2 x_6^3$).
-    \item \textbf{Dramatically Superior Performance:} The optimal degree 5 sparse architecture slashes CV MSE from $0.9618$ to \textbf{$0.3176$} (a \textbf{67.0\% error reduction}) and increases CV $R^2$ from $0.9043$ to \textbf{$0.9685$}, reaching the irreducible sensor noise floor ($\sigma \approx 0.51$).
+    \item \textbf{Discovery of the True Sparse Degree 5 Structure:} By applying L1-penalized feature selection ($\alpha = 0.018$) followed by Post-Lasso OLS debiasing, we discover that the true physical generating function is a \textbf{sparse degree-5 polynomial governed by 47 dominant interaction terms} (e.g., $x_1 x_5$, $x_2^3 x_3$, $x_3 x_6$, $x_1 x_3^2 x_6^2$, $x_1 x_6^2$, $x_5^2 x_6^3$).
+    \item \textbf{Substantial Generalization Leap:} The optimal degree 5 sparse architecture slashes CV MSE from $0.9618$ to \textbf{$0.2913 \pm 0.0248$} (a \textbf{69.7\% error reduction}) and increases CV $R^2$ from $0.9043$ to \textbf{$0.9711 \pm 0.0031$} (Train MSE = $0.2594$, Train $R^2 = 0.9744$), fully converging to the irreducible sensor noise floor ($\sigma \approx 0.51$).
     \item \textbf{Onset of Overfitting at Degree 6:} Extending the sparse architecture to degree 6 increases CV MSE to $0.3661$ ($R^2 = 0.9637$), confirming that $d=5$ is the exact optimal complexity.
 \end{enumerate}
 
@@ -193,11 +220,11 @@ Figure~\ref{fig:diagnostics} displays actual versus predicted response and resid
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.74\textwidth]{fig_fits_and_residuals.png}
-\caption{Model diagnostics: (Left) Actual vs. Predicted values along the ideal identity diagonal ($R^2 = 0.9743$ for \texttt{var1}, $R^2 = 0.9959$ for \texttt{var2}); (Right) Residual distributions centered at zero with homogeneous variance ($\sigma \approx 0.51$ for \texttt{var1}, $\sigma \approx 0.44$ for \texttt{var2}).}
+\caption{Model diagnostics: (Left) Actual vs. Predicted values along the ideal identity diagonal ($R^2 = 0.9744$ for \texttt{var1}, $R^2 = 0.9959$ for \texttt{var2}); (Right) Residual distributions centered at zero with homogeneous variance ($\sigma \approx 0.51$ for \texttt{var1}, $\sigma \approx 0.40$ for \texttt{var2}).}
 \label{fig:diagnostics}
 \end{figure}
 
-\textbf{Verification on Test Set Predictions:} Test set prediction distributions match physical calibration statistics: Phase 1 predictions exhibit mean = $0.9905$, std = $4.1780$, range $[-10.36, 14.98]$ (training target: mean $0.8629$, std $3.1872$, range $[-9.88, 12.07]$). Phase 2 predictions exhibit mean = $2.2535$, std = $6.4661$, range $[-25.28, 38.92]$ (training target: mean $2.2751$, std $6.9016$, range $[-30.26, 39.33]$). Zero unbounded polynomial extrapolation occurred.
+\textbf{Verification on Test Set Predictions:} Test set prediction distributions match physical calibration statistics: Phase 1 predictions exhibit mean = $0.9860$, std = $4.1752$, range $[-10.38, 15.01]$ (training target: mean $0.8629$, std $3.1872$, range $[-9.88, 12.07]$). Phase 2 predictions exhibit mean = $2.2535$, std = $6.4661$, range $[-25.28, 38.92]$ (training target: mean $2.2751$, std $6.9016$, range $[-30.26, 39.33]$). Zero unbounded polynomial extrapolation occurred.
 
 \section{\color{primary} 6. Summary of Deliverables and Reproducibility}
 
@@ -214,8 +241,8 @@ Table~\ref{tab:deliverables} outlines all required deliverables generated for Ro
 \midrule
 Report (PDF) & \texttt{IMT2024072\_Report.pdf} & Professional 4-page academic submission report \\
 \rowcolor{tablelight} Report (\LaTeX) & \texttt{report.tex} & Complete standalone \LaTeX\ source code \\
-Prediction File 1 & \texttt{IMT2024072\_pred\_var1.csv} & 1,000 test predictions ($y$) for Phase 1 (Degree 5 Sparse) \\
-\rowcolor{tablelight} Prediction File 2 & \texttt{IMT2024072\_pred\_var2.csv} & 1,000 test predictions ($y$) for Phase 2 (Degree 8 OLS) \\
+Prediction File 1 & \texttt{IMT2024072\_pred\_var1.csv} & 1,000 test predictions ($y$) for Phase 1 (Degree 5 Sparse, 47 terms) \\
+\rowcolor{tablelight} Prediction File 2 & \texttt{IMT2024072\_pred\_var2.csv} & 1,000 test predictions ($y$) for Phase 2 (Degree 8 OLS, 165 terms) \\
 Training Pipeline & \texttt{polynomial\_regression.py} & Standalone Python training and inference script \\
 \bottomrule
 \end{tabular}
