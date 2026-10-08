@@ -2,7 +2,10 @@
 
 **Course:** Machine Learning  
 **Assignment:** Polynomial Regression  
-**Student Roll No:** IMT2024072  
+**Student Name:** Pranava Swarup  
+**Roll Number:** IMT2024072  
+**Email:** `pranava.swarup@iiitb.ac.in`  
+**Institution:** International Institute of Information Technology, Bangalore (IIIT-B)  
 **Implementation Framework:** `scikit-learn`  
 
 ---
@@ -43,16 +46,16 @@ Using strict **5-fold cross-validation** (`KFold(n_splits=5, shuffle=True, rando
 
 ### Key Observations:
 - **Phase 1 (`var1`):**  
-  - Feature ablation confirmed all 6 physical operational parameters are essential; any subset (e.g., omitting coolant rate $x_2$ or blade pitch $x_4$) caps $R^2$ under $0.63$.
+  - Feature ablation confirmed all 6 physical operational parameters are essential; omitting any subset bounds $R^2 \le 0.6274$.
   - Degrees 1–3 underfit ($R^2$ progresses from $0.0937$ to $0.8965$).  
   - **Degree 4 achieves the global minimum CV MSE (0.9618) and peak $R^2$ (0.9043)**.  
   - Degree 5 introduces 462 terms, causing severe overfitting (CV MSE balloons to $2.2071$).
 
 - **Phase 2 (`var2`):**  
   - Single-variable models (such as $x_1$ alone) fail completely ($R^2 \approx 0.0787$), as convective subsurface heat structures depend inherently on the 3D manifold.
-  - As degree increases from 4 to 8, validation MSE plummets by >93% (from $3.9875$ to $0.2523$).  
-  - **Degree 8 achieves the global minimum CV MSE (0.2523) and peak $R^2$ (0.9946)** with lowest inter-fold variance (±0.0275).  
-  - Degrees $\ge 9$ plateau and exhibit slight overparameterization.
+  - Increasing degree from 4 to 8 slashes validation MSE by >93% (from $3.9875$ to $0.2523$).  
+  - **Degree 8 achieves the global minimum CV MSE (0.2523) and peak $R^2$ (0.9946)**, reaching the intrinsic sensor noise floor ($\sigma^2 \approx 0.20-0.25$).  
+  - Degrees $\ge 9$ plateau and exhibit overparameterization.
 
 ---
 
@@ -67,12 +70,16 @@ Using strict **5-fold cross-validation** (`KFold(n_splits=5, shuffle=True, rando
 │       └── IMT2024072_test_var2.csv    # Test features for Problem 2
 ├── polynomial_regression.py            # Primary standalone training & inference script
 ├── generate_report_figures.py          # Script generating report visualization plots
-├── generate_pdf_report.py              # Script generating the 4-page academic PDF report
-├── IMT2024072_Report.pdf               # Final 4-page academic submission report
+├── generate_colorful_report.py         # Script generating the 4-page academic PDF report
+├── IMT2024072_Report.pdf               # Final 4-page submission report
+├── report.tex                          # Standalone LaTeX source code for report
 ├── IMT2024072_pred_var1.csv            # Final predictions for Problem 1 (test set)
 ├── IMT2024072_pred_var2.csv            # Final predictions for Problem 2 (test set)
-├── regression_plots.png                # CV curves, Actual vs Predicted diagnostics
-├── residual_plots.png                  # Residual homoscedasticity diagnostics
+├── fig_var1_cv.png                     # CV curve for Problem 1
+├── fig_var2_cv.png                     # CV curve for Problem 2
+├── fig_fits_and_residuals.png          # Model diagnostics & residual distributions
+├── regression_plots.png                # Diagnostic fit plot
+├── residual_plots.png                  # Residual diagnostic plot
 ├── requirements.txt                    # Project dependencies
 └── README.md                           # Documentation & reproduction instructions
 ```
@@ -98,19 +105,19 @@ python polynomial_regression.py
 ```
 
 This will:
-1. Load `IMT2024072_train_var1.csv` and `IMT2024072_train_var2.csv`.
-2. Compute 5-fold cross-validation metrics for both problems.
+1. Load calibration datasets from `IMT2024072/IMT2024072/`.
+2. Compute 5-fold cross-validation metrics.
 3. Fit the optimal degree-4 (var1) and degree-8 (var2) polynomial pipelines.
-4. Generate the submission-ready prediction files `IMT2024072_pred_var1.csv` and `IMT2024072_pred_var2.csv`.
+4. Output `IMT2024072_pred_var1.csv` and `IMT2024072_pred_var2.csv`.
 5. Export diagnostic fit and residual plots.
 
 ### 4.3 Rebuild the PDF Report
 
-To re-generate the 4-page academic report:
+To re-generate the figures and the 4-page report:
 
 ```bash
 python generate_report_figures.py
-python generate_pdf_report.py
+python generate_colorful_report.py
 ```
 
 Output: `IMT2024072_Report.pdf`
