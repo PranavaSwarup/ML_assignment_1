@@ -326,72 +326,8 @@ axes[1, 1].grid(True, alpha=0.3)
 
 plt.tight_layout()
 plt.savefig('fig_fits_and_residuals.png', dpi=200)
-plt.savefig('residual_plots.png', dpi=200)
 plt.close()
-p("  Saved: fig_fits_and_residuals.png and residual_plots.png")
-
-# Also save regression_plots.png for assignment compatibility
-fig, axes = plt.subplots(2, 3, figsize=(18, 10))
-
-# 1a
-axes[0, 0].plot(deg_v1, v1_cv_r2_sparse, 'bo-', lw=2, ms=8, label='Sparse Post-Lasso')
-axes[0, 0].plot(deg_v1[:5], v1_cv_r2_ols[:5], 'k^--', lw=1.5, ms=6, label='Naive OLS')
-axes[0, 0].axvline(x=5, color='r', linestyle='--', label='Selected (deg=5)')
-axes[0, 0].set_xlabel('Degree', fontsize=12)
-axes[0, 0].set_ylabel('CV R²', fontsize=12)
-axes[0, 0].set_title('var1: CV R² vs Degree', fontsize=13)
-axes[0, 0].legend()
-axes[0, 0].grid(True, alpha=0.3)
-
-# 1b
-axes[0, 1].plot(deg_v1, v1_cv_mse_sparse, 'ro-', lw=2, ms=8, label='Sparse Post-Lasso')
-axes[0, 1].axvline(x=5, color='b', linestyle='--', label='Selected (deg=5)')
-axes[0, 1].set_xlabel('Degree', fontsize=12)
-axes[0, 1].set_ylabel('CV MSE', fontsize=12)
-axes[0, 1].set_title('var1: CV MSE vs Degree', fontsize=13)
-axes[0, 1].legend()
-axes[0, 1].grid(True, alpha=0.3)
-
-# 1c
-axes[0, 2].scatter(y_train1, train_pred1, alpha=0.45, s=15, c='steelblue')
-axes[0, 2].plot(lims1, lims1, 'r--', lw=1.5, label='Perfect fit')
-axes[0, 2].set_xlabel('Actual y', fontsize=12)
-axes[0, 2].set_ylabel('Predicted y', fontsize=12)
-axes[0, 2].set_title('var1: Actual vs Predicted (Train)', fontsize=13)
-axes[0, 2].legend()
-axes[0, 2].grid(True, alpha=0.3)
-
-# 2a
-axes[1, 0].plot(deg_v2, v2_r2, 'bo-', lw=2, ms=8)
-axes[1, 0].axvline(x=8, color='r', linestyle='--', label='Selected (deg=8)')
-axes[1, 0].set_xlabel('Degree', fontsize=12)
-axes[1, 0].set_ylabel('CV R²', fontsize=12)
-axes[1, 0].set_title('var2: CV R² vs Degree', fontsize=13)
-axes[1, 0].legend()
-axes[1, 0].grid(True, alpha=0.3)
-
-# 2b
-axes[1, 1].plot(deg_v2, v2_mse, 'ro-', lw=2, ms=8)
-axes[1, 1].axvline(x=8, color='b', linestyle='--', label='Selected (deg=8)')
-axes[1, 1].set_xlabel('Degree', fontsize=12)
-axes[1, 1].set_ylabel('CV MSE', fontsize=12)
-axes[1, 1].set_title('var2: CV MSE vs Degree', fontsize=13)
-axes[1, 1].legend()
-axes[1, 1].grid(True, alpha=0.3)
-
-# 2c
-axes[1, 2].scatter(y_train2, train_pred2, alpha=0.45, s=15, c='darkorange')
-axes[1, 2].plot(lims2, lims2, 'r--', lw=1.5, label='Perfect fit')
-axes[1, 2].set_xlabel('Actual y', fontsize=12)
-axes[1, 2].set_ylabel('Predicted y', fontsize=12)
-axes[1, 2].set_title('var2: Actual vs Predicted (Train)', fontsize=13)
-axes[1, 2].legend()
-axes[1, 2].grid(True, alpha=0.3)
-
-plt.tight_layout()
-plt.savefig('regression_plots.png', dpi=150, bbox_inches='tight')
-plt.close()
-p("  Saved: regression_plots.png")
+p("  Saved: fig_fits_and_residuals.png")
 
 p("\n" + "=" * 75)
 p("ALL MODELS EXECUTED, PREDICTIONS SAVED, FIGURES UPDATED SUCCESSFULLY!")
