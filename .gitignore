@@ -3,8 +3,12 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 report_page_*.png
+report_bw_*.png
 test_legend.png
 step1_sweep.py
 sweep_var1.py
 sweep_var2.py
 explore_models.py
+fast_recheck.py
+deep_analysis.py
+inspect_coefficients.py
