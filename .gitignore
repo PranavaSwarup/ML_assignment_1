@@ -12,3 +12,6 @@ explore_models.py
 fast_recheck.py
 deep_analysis.py
 inspect_coefficients.py
+report_color_page_*.png
+sample_submission (*).csv
+IMT20240721/
