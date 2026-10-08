@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+report_page_*.png
+test_legend.png
+step1_sweep.py
+sweep_var1.py
+sweep_var2.py
+explore_models.py
